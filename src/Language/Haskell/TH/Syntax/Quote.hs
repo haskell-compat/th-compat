@@ -1,24 +1,45 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
+
+#if __GLASGOW_HASKELL__ >= 706
+{-# LANGUAGE PolyKinds #-}
+#endif
 
 -- | TODO RGS: Docs
 module Language.Haskell.TH.Syntax.Quote (
     -- TODO RGS: Some bullet points
     Quote(..)
+#if MIN_VERSION_template_haskell(2,9,0)
+  , unTypeQQuote
+  , unsafeTExpCoerceQuote
+#endif
+  , liftQuote
+#if MIN_VERSION_template_haskell(2,16,0)
+  , liftTypedQuote
+#endif
+
   , unsafeQToQuote
   ) where
 
 import qualified Control.Monad.Fail as Fail
 import Control.Monad.IO.Class (MonadIO(..))
+import Language.Haskell.TH (Exp)
 import Language.Haskell.TH.Syntax (Q, runQ, Quasi(..))
+import qualified Language.Haskell.TH.Syntax as Syntax
 
 #if !(MIN_VERSION_base(4,8,0))
 import Control.Applicative
 #endif
 
+#if MIN_VERSION_template_haskell(2,16,0)
+import GHC.Exts (RuntimeRep, TYPE)
+#endif
+
 -- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
 #if __GLASGOW_HASKELL__ >= 811
-import Language.Haskell.TH.Syntax (Quote(..))
+import Language.Haskell.TH.Syntax (Quote(..), unsafeTExpCoerce, unTypeQ)
 #else
 import Language.Haskell.TH (Name)
 #endif
@@ -42,11 +63,11 @@ import Language.Haskell.TH (Name)
 -- more precisely specifying the minimal interface it enables the `Exp` to
 -- be extracted purely from the quotation without interacting with `Q`.
 class ( Monad m
-#if   !(MIN_VERSION_template_haskell(2,7,0))
+# if   !(MIN_VERSION_template_haskell(2,7,0))
       , Functor m
-#elif !(MIN_VERSION_template_haskell(2,10,0))
+# elif !(MIN_VERSION_template_haskell(2,10,0))
       , Applicative m
-#endif
+# endif
       ) => Quote m where
   {- |
   Generate a fresh name, which cannot be captured.
@@ -88,8 +109,72 @@ instance Quote Q where
   newName = qNewName
 #endif
 
+-- TODO RGS: Explain the -Quote suffix on each of these functions
+
+#if MIN_VERSION_template_haskell(2,9,0)
+-- | Discard the type annotation and produce a plain Template Haskell
+-- expression
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+unTypeQQuote ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) (a :: TYPE r) m .
+# else
+  forall a m .
+# endif
+  Quote m => m (Syntax.TExp a) -> m Exp
+-- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
+# if __GLASGOW_HASKELL__ >= 811
+unTypeQQuote = unTypeQ
+# else
+unTypeQQuote m = do { Syntax.TExp e <- m
+                    ; return e }
+# endif
+
+-- | Annotate the Template Haskell expression with a type
+--
+-- This is unsafe because GHC cannot check for you that the expression
+-- really does have the type you claim it has.
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+unsafeTExpCoerceQuote ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) (a :: TYPE r) m .
+# else
+  forall a m .
+# endif
+  Quote m => m Exp -> m (Syntax.TExp a)
+-- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
+# if __GLASGOW_HASKELL__ >= 811
+unsafeTExpCoerceQuote = unsafeTExpCoerce
+# else
+unsafeTExpCoerceQuote m = do { e <- m
+                             ; return (Syntax.TExp e) }
+# endif
+#endif
+
+-- | Turn a value into a Template Haskell expression, suitable for use in
+-- a splice.
+liftQuote :: (Syntax.Lift t, Quote m) => t -> m Exp
+-- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
+#if __GLASGOW_HASKELL__ >= 811
+liftQuote = Syntax.lift
+#else
+liftQuote = unsafeQToQuote . Syntax.lift
+#endif
+
+#if MIN_VERSION_template_haskell(2,16,0)
+liftTypedQuote :: (Syntax.Lift t, Quote m) => t -> m (Syntax.TExp t)
+-- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
+# if __GLASGOW_HASKELL__ >= 811
+liftTypedQuote = Syntax.liftTyped
+# else
+liftTypedQuote = unsafeQToQuote . Syntax.liftTyped
+# endif
+#endif
+
 -- TODO RGS: Docs
-newtype QuoteToQuasi m a = QTQ { unQTQ :: m a }
+newtype QuoteToQuasi (m :: * -> *) a = QTQ { unQTQ :: m a }
   deriving (Functor, Applicative, Monad)
 
 qtqError :: String -> a
