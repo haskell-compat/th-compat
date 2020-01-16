@@ -46,7 +46,9 @@ test-suite spec
   main-is:             Spec.hs
   other-modules:       Language.Haskell.TH.Syntax.QuoteSpec
   build-depends:       base             >= 4.3 && < 5
+                     , base-compat      >= 0.6 && < 0.12
                      , hspec            >= 2   && < 3
+                     , mtl              >= 2.1 && < 2.3
                      , template-haskell >= 2.5 && < 2.18
                      , th-quote
   build-tool-depends:  hspec-discover:hspec-discover >= 2

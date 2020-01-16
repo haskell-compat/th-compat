@@ -69,6 +69,11 @@ class ( Monad m
       , Applicative m
 # endif
       ) => Quote m where
+  -- TODO RGS: This will clash with the top-level `newName` function on old
+  -- versions of template-haskell. This should be prominently advertised in
+  -- the Haddocks, and perhaps in the elsewhere (module Haddocks, .cabal
+  -- file, README, etc.) as well.
+
   {- |
   Generate a fresh name, which cannot be captured.
 
