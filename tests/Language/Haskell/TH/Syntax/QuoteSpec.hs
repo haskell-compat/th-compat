@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | TODO RGS: Docs
+-- | Regression tests for "Language.Haskell.TH.Syntax.Quote".
 module Language.Haskell.TH.Syntax.QuoteSpec (main, spec) where
 
 import Control.Exception (evaluate)

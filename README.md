@@ -15,4 +15,9 @@
   https://tldrlegal.com/license/bsd-3-clause-license-%28revised%29
   "BSD 3-Clause License (Revised)"
 
-TODO RGS
+This package defines a `Language.Haskell.TH.Syntax.Quote` module providing a
+`Quote` class that works across all versions of `template-haskell`. On recent
+versions of `template-haskell` (2.17.0.0 or later), this module simply
+reexports `Quote` from `Language.Haskell.TH.Syntax`. Refer to the Haddocks
+for `Language.Haskell.TH.Syntax.Quote` for an example of how to use this
+module.
