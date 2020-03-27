@@ -72,6 +72,7 @@ module Language.Haskell.TH.Syntax.Quote (
 #if MIN_VERSION_template_haskell(2,16,0)
   , liftTypedQuote
 #endif
+  , liftStringQuote
   ) where
 
 import qualified Control.Monad.Fail as Fail
@@ -210,7 +211,7 @@ unsafeTExpCoerceQuote m = do { e <- m
 -- | Turn a value into a Template Haskell expression, suitable for use in
 -- a splice.
 --
--- This is a variant of the 'lift' function that is always guaranteed to
+-- This is a variant of the 'Syntax.lift' function that is always guaranteed to
 -- use a 'Quote' constraint, even on old versions of @template-haskell@.
 liftQuote :: (Syntax.Lift t, Quote m) => t -> m Exp
 -- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
@@ -226,8 +227,9 @@ liftQuote = unsafeQToQuote . Syntax.lift
 --
 -- /since template-haskell-2.16.0.0/
 --
--- This is a variant of the 'liftTyped' function that is always guaranteed to
--- use a 'Quote' constraint, even on old versions of @template-haskell@.
+-- This is a variant of the 'Syntax.liftTyped' function that is always
+-- guaranteed to use a 'Quote' constraint, even on old versions of
+-- @template-haskell@.
 liftTypedQuote :: (Syntax.Lift t, Quote m) => t -> m (Syntax.TExp t)
 -- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
 # if __GLASGOW_HASKELL__ >= 811
@@ -235,6 +237,17 @@ liftTypedQuote = Syntax.liftTyped
 # else
 liftTypedQuote = unsafeQToQuote . Syntax.liftTyped
 # endif
+#endif
+
+-- | This is a variant of the 'Syntax.liftString' function that is always
+-- guaranteed to use a 'Quote' constraint, even on old versions of
+-- @template-haskell@.
+liftStringQuote :: Quote m => String -> m Exp
+-- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
+#if __GLASGOW_HASKELL__ >= 811
+liftStringQuote = Syntax.liftString
+#else
+liftStringQuote = unsafeQToQuote . Syntax.liftString
 #endif
 
 -- | Use a 'Q' computation in a 'Quote' context. This function is only safe
