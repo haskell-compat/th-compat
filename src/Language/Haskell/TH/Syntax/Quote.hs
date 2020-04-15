@@ -90,15 +90,13 @@ import Control.Applicative
 import GHC.Exts (RuntimeRep, TYPE)
 #endif
 
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-#if __GLASGOW_HASKELL__ >= 811
+#if MIN_VERSION_template_haskell(2,17,0)
 import Language.Haskell.TH.Syntax (Quote(..), unsafeTExpCoerce, unTypeQ)
 #else
 import Language.Haskell.TH (Name)
 #endif
 
--- TODO RGS: Use !(MIN_VERSION_template_haskell(2,17,0)) when that's possible
-#if __GLASGOW_HASKELL__ < 811
+#if !(MIN_VERSION_template_haskell(2,17,0))
 -- | The 'Quote' class implements the minimal interface which is necessary for
 -- desugaring quotations.
 --
@@ -174,8 +172,7 @@ unTypeQQuote ::
   forall a m .
 # endif
   Quote m => m (Syntax.TExp a) -> m Exp
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-# if __GLASGOW_HASKELL__ >= 811
+# if MIN_VERSION_template_haskell(2,17,0)
 unTypeQQuote = unTypeQ
 # else
 unTypeQQuote m = do { Syntax.TExp e <- m
@@ -199,8 +196,7 @@ unsafeTExpCoerceQuote ::
   forall a m .
 # endif
   Quote m => m Exp -> m (Syntax.TExp a)
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-# if __GLASGOW_HASKELL__ >= 811
+# if MIN_VERSION_template_haskell(2,17,0)
 unsafeTExpCoerceQuote = unsafeTExpCoerce
 # else
 unsafeTExpCoerceQuote m = do { e <- m
@@ -214,8 +210,7 @@ unsafeTExpCoerceQuote m = do { e <- m
 -- This is a variant of the 'Syntax.lift' function that is always guaranteed to
 -- use a 'Quote' constraint, even on old versions of @template-haskell@.
 liftQuote :: (Syntax.Lift t, Quote m) => t -> m Exp
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-#if __GLASGOW_HASKELL__ >= 811
+#if MIN_VERSION_template_haskell(2,17,0)
 liftQuote = Syntax.lift
 #else
 liftQuote = unsafeQToQuote . Syntax.lift
@@ -231,8 +226,7 @@ liftQuote = unsafeQToQuote . Syntax.lift
 -- guaranteed to use a 'Quote' constraint, even on old versions of
 -- @template-haskell@.
 liftTypedQuote :: (Syntax.Lift t, Quote m) => t -> m (Syntax.TExp t)
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-# if __GLASGOW_HASKELL__ >= 811
+# if MIN_VERSION_template_haskell(2,17,0)
 liftTypedQuote = Syntax.liftTyped
 # else
 liftTypedQuote = unsafeQToQuote . Syntax.liftTyped
@@ -243,8 +237,7 @@ liftTypedQuote = unsafeQToQuote . Syntax.liftTyped
 -- guaranteed to use a 'Quote' constraint, even on old versions of
 -- @template-haskell@.
 liftStringQuote :: Quote m => String -> m Exp
--- TODO RGS: Use MIN_VERSION_template_haskell(2,17,0) when that's possible
-#if __GLASGOW_HASKELL__ >= 811
+#if MIN_VERSION_template_haskell(2,17,0)
 liftStringQuote = Syntax.liftString
 #else
 liftStringQuote = unsafeQToQuote . Syntax.liftString
