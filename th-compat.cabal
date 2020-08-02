@@ -1,16 +1,17 @@
 cabal-version:       >=1.10
-name:                th-quote
+name:                th-compat
 version:             0.1
-synopsis:            Backward- (and forward-)compatible Quote class
-description:         This package defines a "Language.Haskell.TH.Syntax.Quote"
-                     module providing a @Quote@ class that works across all
-                     versions of @template-haskell@. On recent versions of
-                     @template-haskell@ (2.17.0.0 or later), this module simply
-                     reexports @Quote@ from "Language.Haskell.TH.Syntax". Refer
-                     to the Haddocks for "Language.Haskell.TH.Syntax.Quote" for
-                     an example of how to use this module.
-homepage:            https://github.com/haskell-compat/th-quote
-bug-reports:         https://github.com/haskell-compat/th-quote/issues
+synopsis:            Backward- (and forward-)compatible Quote and Code types
+description:         This package defines a "Language.Haskell.TH.Syntax.Compat"
+                     module, which backports the @Quote@ and @Code@ types to
+                     work across a wide range of @template-haskell@ versions.
+                     On recent versions of @template-haskell@ (2.17.0.0 or
+                     later), this module simply reexports @Quote@ and @Code@
+                     from "Language.Haskell.TH.Syntax". Refer to the Haddocks
+                     for "Language.Haskell.TH.Syntax.Compat" for examples of
+                     how to use this module.
+homepage:            https://github.com/haskell-compat/th-compat
+bug-reports:         https://github.com/haskell-compat/th-compat/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Ryan Scott
@@ -34,10 +35,10 @@ extra-source-files:  CHANGELOG.md, README.md
 
 source-repository head
   type:                git
-  location:            https://github.com/haskell-compat/th-quote
+  location:            https://github.com/haskell-compat/th-compat
 
 library
-  exposed-modules:     Language.Haskell.TH.Syntax.Quote
+  exposed-modules:     Language.Haskell.TH.Syntax.Compat
   build-depends:       base             >= 4.3 && < 5
                      , template-haskell >= 2.5 && < 2.18
   if !impl(ghc >= 8.0)
@@ -52,13 +53,13 @@ library
 test-suite spec
   type:                exitcode-stdio-1.0
   main-is:             Spec.hs
-  other-modules:       Language.Haskell.TH.Syntax.QuoteSpec
+  other-modules:       Language.Haskell.TH.Syntax.CompatSpec
   build-depends:       base             >= 4.3 && < 5
                      , base-compat      >= 0.6 && < 0.12
                      , hspec            >= 2   && < 3
                      , mtl              >= 2.1 && < 2.3
                      , template-haskell >= 2.5 && < 2.18
-                     , th-quote
+                     , th-compat
   build-tool-depends:  hspec-discover:hspec-discover >= 2
   hs-source-dirs:      tests
   default-language:    Haskell2010
