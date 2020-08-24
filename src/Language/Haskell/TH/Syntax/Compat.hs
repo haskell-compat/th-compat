@@ -62,6 +62,11 @@ module Language.Haskell.TH.Syntax.Compat (
   , bindCode
   , bindCode_
   , joinCode
+
+  -- * @Splice@
+  , Splice
+  , SpliceQ
+  , liftTypedFromUntypedSplice
 #endif
   ) where
 
@@ -652,5 +657,93 @@ joinCode ::
 #  endif
   Monad m => m (Code m a) -> Code m a
 joinCode = flip bindCode id
+# endif
+
+-- | @'Splice' m a@ is a type alias for:
+--
+-- * @'Code' m a@, if using @template-haskell-2.17.0.0@ or later, or
+--
+-- * @m ('Syntax.TExp' a)@, if using an older version of @template-haskell@.
+--
+-- This should be used with caution, as its definition differs depending on
+-- which version of @template-haskell@ you are using. It is mostly useful for
+-- contexts in which one is writing a definition that is intended to be used
+-- directly in a typed Template Haskell splice, as the types of TH splices
+-- differ between @template-haskell@ versions as well. One example of a type
+-- that uses 'Splice' is the type signature for 'lifTypedFromUntypedSplice'.
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+# if MIN_VERSION_template_haskell(2,17,0)
+type Splice  = Code :: (forall r. (* -> *) -> TYPE r -> *)
+# elif MIN_VERSION_template_haskell(2,16,0)
+type Splice m (a :: TYPE r) = m (Syntax.TExp a)
+# else
+type Splice m a = m (Syntax.TExp a)
+# endif
+
+-- | @'SpliceQ' a@ is a type alias for:
+--
+-- * @'Code' 'Q' a@, if using @template-haskell-2.17.0.0@ or later, or
+--
+-- * @'Q' ('Syntax.TExp' a)@, if using an older version of @template-haskell@.
+--
+-- This should be used with caution, as its definition differs depending on
+-- which version of @template-haskell@ you are using. It is mostly useful for
+-- contexts in which one is writing a definition that is intended to be used
+-- directly in a typed Template Haskell splice, as the types of TH splices
+-- differ between @template-haskell@ versions as well.
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+# if MIN_VERSION_template_haskell(2,17,0)
+type SpliceQ = Splice Q :: (TYPE r -> *)
+# elif MIN_VERSION_template_haskell(2,16,0)
+type SpliceQ (a :: TYPE r) = Splice Q a
+# else
+type SpliceQ a = Splice Q a
+# endif
+
+-- | A variant of 'liftTypedQuote' that is:
+--
+-- 1. Always implemented in terms of 'Syntax.lift' behind the scenes, and
+--
+-- 2. Returns a 'Splice'. This means that the return type of this function will
+--    be different depending on which version of @template-haskell@ you are
+--    using. (See the Haddocks for 'Splice' for more information on this
+--    point.)
+--
+-- This is primarily useful for minimizing CPP in one particular scenario:
+-- implementing 'Syntax.liftTyped' in hand-written 'Syntax.Lift' instances
+-- where the corresponding 'Syntax.lift' implementation cannot be derived. For
+-- instance, consider this example from the @text@ library:
+--
+-- @
+-- instance 'Syntax.Lift' Text where
+--   'Syntax.lift' = appE (varE 'pack) . stringE . unpack
+-- #if MIN_VERSION_template_haskell(2,17,0)
+--   'Syntax.liftTyped' = 'unsafeCodeCoerce' . 'Syntax.lift'
+-- #elif MIN_VERSION_template_haskell(2,16,0)
+--   'Syntax.liftTyped' = 'Syntax.unsafeTExpCoerce' . 'Syntax.lift'
+-- #endif
+-- @
+--
+-- The precise details of how this 'Syntax.lift' implementation works are not
+-- important, only that it is something that @DeriveLift@ could not generate.
+-- The main point of this example is to illustrate how tiresome it is to write
+-- the CPP necessary to define 'Syntax.liftTyped' in a way that works across
+-- multiple versions of @template-haskell@. With 'liftTypedFromUntypedSplice',
+-- however, this becomes slightly easier to manage:
+--
+-- @
+-- instance 'Syntax.Lift' Text where
+--   'Syntax.lift' = appE (varE 'pack) . stringE . unpack
+-- #if MIN_VERSION_template_haskell(2,16,0)
+--   'Syntax.liftTyped' = 'liftTypedFromUntypedSplice'
+-- #endif
+-- @
+liftTypedFromUntypedSplice :: (Syntax.Lift t, Quote m) => t -> Splice m t
+# if MIN_VERSION_template_haskell(2,17,0)
+liftTypedFromUntypedSplice = unsafeCodeCoerce . liftQuote
+# else
+liftTypedFromUntypedSplice = unsafeTExpCoerceQuote . liftQuote
 # endif
 #endif
