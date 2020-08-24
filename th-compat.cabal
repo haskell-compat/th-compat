@@ -54,6 +54,7 @@ test-suite spec
   type:                exitcode-stdio-1.0
   main-is:             Spec.hs
   other-modules:       Language.Haskell.TH.Syntax.CompatSpec
+                       Types
   build-depends:       base             >= 4.3 && < 5
                      , base-compat      >= 0.6 && < 0.12
                      , hspec            >= 2   && < 3

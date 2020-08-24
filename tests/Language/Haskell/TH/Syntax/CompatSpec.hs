@@ -16,6 +16,10 @@ import Prelude.Compat
 
 import Test.Hspec
 
+#if MIN_VERSION_template_haskell(2,9,0)
+import Types
+#endif
+
 main :: IO ()
 main = hspec spec
 
@@ -38,6 +42,10 @@ spec = parallel $ do
   describe "IsCode" $
     it "manipulates typed TH expressions in a backwards-compatible way" $
       $$(fromCode (toCode [|| "abc" ||])) `shouldBe` "abc"
+
+  describe "liftTypedFromUntypedSplice" $
+    it "allows defining liftTyped in a convenient, backwards-compatible way" $
+      $$(liftTypedFromUntypedSplice MkFoo) `shouldBe` MkFoo
 #endif
 
 newtype PureQ a = MkPureQ (State Uniq a)
