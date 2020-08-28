@@ -67,6 +67,7 @@ module Language.Haskell.TH.Syntax.Compat (
   , Splice
   , SpliceQ
   , liftTypedFromUntypedSplice
+  , unsafeSpliceCoerce
 #endif
   ) where
 
@@ -740,10 +741,60 @@ type SpliceQ a = Splice Q a
 --   'Syntax.liftTyped' = 'liftTypedFromUntypedSplice'
 -- #endif
 -- @
+--
+-- Note that due to the way this function is defined, this will only work
+-- for 'Syntax.Lift' instances @t@ such that @(t :: Type)@. If you wish to
+-- manually define 'Syntax.liftTyped' for a type with a different kind, you
+-- will have to use 'unsafeSpliceCoerce' to overcome levity polymorphism
+-- restrictions.
 liftTypedFromUntypedSplice :: (Syntax.Lift t, Quote m) => t -> Splice m t
-# if MIN_VERSION_template_haskell(2,17,0)
-liftTypedFromUntypedSplice = unsafeCodeCoerce . liftQuote
+liftTypedFromUntypedSplice = unsafeSpliceCoerce . liftQuote
+
+-- | Unsafely convert an untyped code representation into a typed code
+-- representation, where:
+--
+-- * The splice representation is @'Code' m a@, if using
+--   @template-haskell-2.17.0.0@ or later, or
+--
+-- * The splice representation is @m ('Syntax.TExp' a)@, if using an older
+--   version of @template-haskell@.
+--
+-- This is primarily useful for minimizing CPP when the following two
+-- conditions are met:
+--
+-- 1. You need to implement 'Syntax.liftTyped' in a hand-written 'Syntax.Lift'
+--    instance where the corresponding 'Syntax.lift' implementation cannot be
+--    derived, and
+--
+-- 2. The data type receiving a 'Lift' instance has a kind besides @Type@.
+--
+-- Condition (2) is important because while it is possible to simply define
+-- @'Syntax.liftTyped = 'liftTypedFromUntypedSplice'@ for 'Syntax.Lift'
+-- instances @t@ such that @(t :: Type)@, this will not work for types with
+-- different types, such as unboxed types or unlifted newtypes. This is because
+-- GHC restrictions prevent defining 'liftTypedFromUntypedSplice' in a levity
+-- polymorphic fashion, so one must use 'unsafeSpliceCoerce' to work around
+-- these restrictions. Here is an example of how to use 'unsafeSpliceCoerce`:
+--
+-- @
+-- instance 'Syntax.Lift' Int# where
+--   'Syntax.lift' x = litE (intPrimL (fromIntegral (I# x)))
+-- #if MIN_VERSION_template_haskell(2,16,0)
+--   'Syntax.liftTyped' x = 'unsafeSpliceCoerce' ('Syntax.lift' x)
+-- #endif
+-- @
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+unsafeSpliceCoerce ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) (a :: TYPE r) m .
 # else
-liftTypedFromUntypedSplice = unsafeTExpCoerceQuote . liftQuote
+  forall a m .
+# endif
+  Quote m => m Exp -> Splice m a
+# if MIN_VERSION_template_haskell(2,17,0)
+unsafeSpliceCoerce = unsafeCodeCoerce
+# else
+unsafeSpliceCoerce = unsafeTExpCoerceQuote
 # endif
 #endif
