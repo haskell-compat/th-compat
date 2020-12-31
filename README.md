@@ -3,7 +3,7 @@
 [![Hackage Dependencies](https://img.shields.io/hackage-deps/v/th-compat.svg)](http://packdeps.haskellers.com/reverse/th-compat)
 [![Haskell Programming Language](https://img.shields.io/badge/language-Haskell-blue.svg)][Haskell.org]
 [![BSD3 License](http://img.shields.io/badge/license-BSD3-brightgreen.svg)][tl;dr Legal: BSD3]
-[![Build](https://img.shields.io/travis/haskell-compat/th-compat.svg)](https://travis-ci.org/haskell-compat/th-compat)
+[![Build Status](https://github.com/haskell-compat/th-compat/workflows/Haskell-CI/badge.svg)](https://github.com/haskell-compat/th-compat/actions?query=workflow%3AHaskell-CI)
 
 [Hackage: th-compat]:
   http://hackage.haskell.org/package/th-compat
