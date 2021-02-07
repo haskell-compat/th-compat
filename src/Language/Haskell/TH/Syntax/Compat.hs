@@ -472,8 +472,8 @@ instance Quote m => Quasi (QuoteToQuasi m) where
 -- myCode = 'toCode' [|| 42 ||]
 --
 -- -- 'fromCode' will ensure that the input 'Code' is suitable for splicing
--- (i.e., it will return a 'Code' or a 'TExp' depending on the
--- @template-haskell@ version in use).
+-- -- (i.e., it will return a 'Code' or a 'TExp' depending on the
+-- -- @template-haskell@ version in use).
 -- fortyTwo :: Int
 -- fortyTwo = $$('fromCode' myCode)
 -- @
@@ -599,6 +599,7 @@ unTypeCode = unTypeQQuote . examineCode
 
 -- | Modify the ambient monad used during code generation. For example, you
 -- can use `hoistCode` to handle a state effect:
+--
 -- @
 --  handleState :: Code (StateT Int Q) a -> Code Q a
 --  handleState = hoistCode (flip runState 0)
