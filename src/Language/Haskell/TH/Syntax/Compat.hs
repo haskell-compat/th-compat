@@ -720,9 +720,9 @@ type SpliceQ a = Splice Q a
 -- @
 -- instance 'Syntax.Lift' Text where
 --   'Syntax.lift' = appE (varE 'pack) . stringE . unpack
--- #if MIN_VERSION_template_haskell(2,17,0)
+-- #if MIN\_VERSION\_template\_haskell(2,17,0)
 --   'Syntax.liftTyped' = 'unsafeCodeCoerce' . 'Syntax.lift'
--- #elif MIN_VERSION_template_haskell(2,16,0)
+-- #elif MIN\_VERSION\_template\_haskell(2,16,0)
 --   'Syntax.liftTyped' = 'Syntax.unsafeTExpCoerce' . 'Syntax.lift'
 -- #endif
 -- @
@@ -737,7 +737,7 @@ type SpliceQ a = Splice Q a
 -- @
 -- instance 'Syntax.Lift' Text where
 --   'Syntax.lift' = appE (varE 'pack) . stringE . unpack
--- #if MIN_VERSION_template_haskell(2,16,0)
+-- #if MIN\_VERSION\_template\_haskell(2,16,0)
 --   'Syntax.liftTyped' = 'liftTypedFromUntypedSplice'
 -- #endif
 -- @
@@ -779,7 +779,7 @@ liftTypedFromUntypedSplice = unsafeSpliceCoerce . liftQuote
 -- @
 -- instance 'Syntax.Lift' Int# where
 --   'Syntax.lift' x = litE (intPrimL (fromIntegral (I# x)))
--- #if MIN_VERSION_template_haskell(2,16,0)
+-- #if MIN\_VERSION\_template\_haskell(2,16,0)
 --   'Syntax.liftTyped' x = 'unsafeSpliceCoerce' ('Syntax.lift' x)
 -- #endif
 -- @
