@@ -43,9 +43,22 @@ spec = parallel $ do
     it "manipulates typed TH expressions in a backwards-compatible way" $
       $$(fromCode (toCode [|| "abc" ||])) `shouldBe` "abc"
 
+  describe "joinSplice" $
+    it "allows intermixing typed TH splices with monadic computations in a convenient way" $
+      $$(joinSplice (do { x <- return "abc"; return [|| x ||] })) `shouldBe` "abc"
+
+  describe "liftSplice" $
+    it "allows intermixing typed TH splices with monadic computations in a convenient way" $
+      $$(liftSplice (do { x <- return "abc"; examineSplice [|| x ||] })) `shouldBe` "abc"
+
   describe "liftTypedFromUntypedSplice" $
     it "allows defining liftTyped in a convenient, backwards-compatible way" $
       $$(liftTypedFromUntypedSplice MkFoo) `shouldBe` MkFoo
+
+  describe "unTypeSplice" $
+    it "allows unwrapping Code in a convenient, backwards-compatible way" $
+      $$(unsafeSpliceCoerce (return . ListE =<< traverse unTypeSplice [ [|| "abc" ||] ]) :: SpliceQ [String])
+        `shouldBe` ["abc"]
 #endif
 
 newtype PureQ a = MkPureQ (State Uniq a)

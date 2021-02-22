@@ -57,7 +57,7 @@ module Language.Haskell.TH.Syntax.Compat (
     -- ** The @IsCode@ class
   , IsCode(..)
     -- ** Limitations of @IsCode@
-    -- $limitations
+    -- $isCodeLimitations
     -- ** Functions from @Language.Haskell.TH.Syntax@
   , unsafeCodeCoerce
   , liftCode
@@ -70,8 +70,15 @@ module Language.Haskell.TH.Syntax.Compat (
   -- * @Splice@
   , Splice
   , SpliceQ
+  , bindSplice
+  , bindSplice_
+  , examineSplice
+  , hoistSplice
+  , joinSplice
+  , liftSplice
   , liftTypedFromUntypedSplice
   , unsafeSpliceCoerce
+  , unTypeSplice
 #endif
   ) where
 
@@ -450,8 +457,20 @@ instance Quote m => Quasi (QuoteToQuasi m) where
 -- One troublesome aspect of writing backwards-compatible code involving 'Code'
 -- is that GHC 9.0 changed the types of typed Template Haskell splices. Before,
 -- they were of type @'Q' ('TExp' a)@, but they are now of type @'Code' 'Q' a@.
--- The 'IsCode' class can be used to paper over the difference between these
--- two types. For more details, consult the Haddocks for 'IsCode'.
+-- This modules provides two mechanisms for smoothing over the differences
+-- between these two types:
+--
+-- * The 'IsCode' class can be used to convert 'Code' or 'TExp' values to
+--   'Code', and vice versa.
+--
+-- * The 'Splice' type synonym uses CPP so that @'Splice' q a@ is a synonym for
+--   @'Code' q a@ on GHC 9.0 or later and @q ('TExp' a)@ on older versions of
+--   GHC. This module also defines versions of 'Code'- and 'TExp'-related
+--   combinators that work over 'Splice'.
+--
+-- Refer to the Haddocks for 'IsCode' and 'Splice' for more information on each
+-- approach. Both approaches have pros and cons, and as a result, neither
+-- approach is a one-size-fits-all solution.
 --
 -- Because 'Code' interacts with typed Template Haskell, the 'Code' type and
 -- any function that mentions 'Code' in its type are only defined on
@@ -517,7 +536,7 @@ instance texp ~ Syntax.TExp a => IsCode Q
   toCode   = liftCode
   fromCode = examineCode
 
--- $limitations
+-- $isCodeLimitations
 -- 'IsCode' makes it possible to backport code involving typed Template Haskell
 -- quotations and splices where the types are monomorphized to 'Q'. GHC 9.0
 -- and later, however, make it possible to use typed TH quotations and splices
@@ -675,8 +694,7 @@ joinCode = flip bindCode id
 -- which version of @template-haskell@ you are using. It is mostly useful for
 -- contexts in which one is writing a definition that is intended to be used
 -- directly in a typed Template Haskell splice, as the types of TH splices
--- differ between @template-haskell@ versions as well. One example of a type
--- that uses 'Splice' is the type signature for 'lifTypedFromUntypedSplice'.
+-- differ between @template-haskell@ versions as well.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 # if MIN_VERSION_template_haskell(2,17,0)
@@ -708,6 +726,121 @@ type SpliceQ (a :: TYPE r) = Splice Q a
 type SpliceQ a = Splice Q a
 # endif
 
+-- | A variant of 'bindCode' that works over 'Splice's. Because this function
+-- uses 'Splice', the type of this function will be different depending on
+-- which version of @template-haskell@ you are using. (See the Haddocks for
+-- 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+bindSplice ::
+#  if MIN_VERSION_template_haskell(2,16,0)
+  forall m a (r :: RuntimeRep) (b :: TYPE r) .
+#  else
+  forall m a b .
+#  endif
+  Monad m => m a -> (a -> Splice m b) -> Splice m b
+# if MIN_VERSION_template_haskell(2,17,0)
+bindSplice = bindCode
+# else
+bindSplice q k = liftSplice (q >>= examineSplice . k)
+# endif
+
+-- | A variant of 'bindCode_' that works over 'Splice's. Because this function
+-- uses 'Splice', the type of this function will be different depending on
+-- which version of @template-haskell@ you are using. (See the Haddocks for
+-- 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+bindSplice_ ::
+#  if MIN_VERSION_template_haskell(2,16,0)
+  forall m a (r :: RuntimeRep) (b :: TYPE r) .
+#  else
+  forall m a b .
+#  endif
+  Monad m => m a -> Splice m b -> Splice m b
+# if MIN_VERSION_template_haskell(2,17,0)
+bindSplice_ = bindCode_
+# else
+bindSplice_ q c = liftSplice ( q >> examineSplice c)
+# endif
+
+-- | A variant of 'examineCode' that takes a 'Splice' as an argument. Because
+-- this function takes a 'Splice' as an argyment, the type of this function
+-- will be different depending on which version of @template-haskell@ you are
+-- using. (See the Haddocks for 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+examineSplice ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) m (a :: TYPE r) .
+# else
+  forall m a .
+# endif
+  Splice m a -> m (Syntax.TExp a)
+# if MIN_VERSION_template_haskell(2,17,0)
+examineSplice = examineCode
+# else
+examineSplice = id
+# endif
+
+-- | A variant of 'hoistCode' that works over 'Splice's. Because this function
+-- uses 'Splice', the type of this function will be different depending on
+-- which version of @template-haskell@ you are using. (See the Haddocks for
+-- 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+hoistSplice ::
+#  if MIN_VERSION_template_haskell(2,16,0)
+  forall m n (r :: RuntimeRep) (a :: TYPE r) .
+#  else
+  forall m n a .
+#  endif
+  Monad m => (forall x . m x -> n x) -> Splice m a -> Splice n a
+# if MIN_VERSION_template_haskell(2,17,0)
+hoistSplice = hoistCode
+# else
+hoistSplice f a = f a
+# endif
+
+-- | A variant of 'joinCode' that works over 'Splice's. Because this function
+-- uses 'Splice', the type of this function will be different depending on
+-- which version of @template-haskell@ you are using. (See the Haddocks for
+-- 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+joinSplice ::
+#  if MIN_VERSION_template_haskell(2,16,0)
+  forall m (r :: RuntimeRep) (a :: TYPE r) .
+#  else
+  forall m a .
+#  endif
+  Monad m => m (Splice m a) -> Splice m a
+# if MIN_VERSION_template_haskell(2,17,0)
+joinSplice = joinCode
+# else
+joinSplice = flip bindSplice id
+# endif
+
+-- | A variant of 'liftCode' that returns a 'Splice'. Because this function
+-- returns a 'Splice', the return type of this function will be different
+-- depending on which version of @template-haskell@ you are using. (See the
+-- Haddocks for 'Splice' for more
+-- information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+liftSplice ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) (a :: TYPE r) m .
+# else
+  forall a m .
+# endif
+  m (Syntax.TExp a) -> Splice m a
+# if MIN_VERSION_template_haskell(2,17,0)
+liftSplice = liftCode
+# else
+liftSplice = id
+# endif
+
 -- | A variant of 'liftTypedQuote' that is:
 --
 -- 1. Always implemented in terms of 'Syntax.lift' behind the scenes, and
@@ -717,7 +850,7 @@ type SpliceQ a = Splice Q a
 --    using. (See the Haddocks for 'Splice' for more information on this
 --    point.)
 --
--- This is primarily useful for minimizing CPP in one particular scenario:
+-- This is especially useful for minimizing CPP in one particular scenario:
 -- implementing 'Syntax.liftTyped' in hand-written 'Syntax.Lift' instances
 -- where the corresponding 'Syntax.lift' implementation cannot be derived. For
 -- instance, consider this example from the @text@ library:
@@ -755,17 +888,13 @@ type SpliceQ a = Splice Q a
 liftTypedFromUntypedSplice :: (Syntax.Lift t, Quote m) => t -> Splice m t
 liftTypedFromUntypedSplice = unsafeSpliceCoerce . liftQuote
 
--- | Unsafely convert an untyped code representation into a typed code
--- representation, where:
+-- | Unsafely convert an untyped splice representation into a typed 'Splice'
+-- representation. Because this function returns a 'Splice', the return type of
+-- this function will be different depending on which version of
+-- @template-haskell@ you are using. (See the Haddocks for 'Splice' for more
+-- information on this point.)
 --
--- * The splice representation is @'Code' m a@, if using
---   @template-haskell-2.17.0.0@ or later, or
---
--- * The splice representation is @m ('Syntax.TExp' a)@, if using an older
---   version of @template-haskell@.
---
--- This is primarily useful for minimizing CPP when the following two
--- conditions are met:
+-- This is especially useful for minimizing CPP when:
 --
 -- 1. You need to implement 'Syntax.liftTyped' in a hand-written 'Syntax.Lift'
 --    instance where the corresponding 'Syntax.lift' implementation cannot be
@@ -801,5 +930,24 @@ unsafeSpliceCoerce ::
 unsafeSpliceCoerce = unsafeCodeCoerce
 # else
 unsafeSpliceCoerce = unsafeTExpCoerceQuote
+# endif
+
+-- | A variant of 'unTypeCode' that takes a 'Splice' as an argument. Because
+-- this function takes a 'Splice' as an argyment, the type of this function
+-- will be different depending on which version of @template-haskell@ you are
+-- using. (See the Haddocks for 'Splice' for more information on this point.)
+--
+-- Levity-polymorphic since /template-haskell-2.16.0.0/.
+unTypeSplice ::
+# if MIN_VERSION_template_haskell(2,16,0)
+  forall (r :: RuntimeRep) (a :: TYPE r) m .
+# else
+  forall a m .
+# endif
+  Quote m => Splice m a -> m Exp
+# if MIN_VERSION_template_haskell(2,17,0)
+unTypeSplice = unTypeCode
+# else
+unTypeSplice = unTypeQQuote
 # endif
 #endif
