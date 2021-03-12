@@ -1,4 +1,4 @@
-### next [????.??.??]
+### 0.1.2 [2021.03.12]
 * Add `bindSplice`, `bindSplice_`, `examineSplice`, `joinSplice`,
   `hoistSplice`, `liftSplice`, and `unTypeSplice` to
   `Language.Haskell.TH.Syntax.Compat`.
