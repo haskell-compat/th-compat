@@ -440,6 +440,10 @@ instance Quote m => Quasi (QuoteToQuasi m) where
 #if MIN_VERSION_template_haskell(2,16,0)
   qReifyType          = qtqError "qReifyType"
 #endif
+#if MIN_VERSION_template_haskell(2,18,0)
+  qGetDoc             = qtqError "qGetDoc"
+  qPutDoc             = qtqError "qPutDoc"
+#endif
 
 -------------------------------------------------------------------------------
 -- Code
