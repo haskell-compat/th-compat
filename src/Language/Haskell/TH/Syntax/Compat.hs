@@ -79,6 +79,7 @@ module Language.Haskell.TH.Syntax.Compat (
   , liftTypedFromUntypedSplice
   , unsafeSpliceCoerce
   , unTypeSplice
+  , expToSplice
 #endif
   ) where
 
@@ -767,6 +768,20 @@ bindSplice_ = bindCode_
 # else
 bindSplice_ q c = liftSplice ( q >> examineSplice c)
 # endif
+
+-- | Lift a @'Syntax.TExp' a@ into a 'Splice'. This is useful when splicing
+-- in the result of a computation into a typed QuasiQuoter.
+--
+-- @
+-- foo :: 'SpliceQ' a
+-- foo = 'liftSplice' $ do
+--      ints <- [|| [1,2,3] ||] :: SpliceQ [Int]
+--      'examineSplice' [|| sum $$(expToSplice ints) ||]
+-- @
+--
+-- @since ????.??.??
+expToSplice :: Applicative m => Syntax.TExp a -> Splice m a
+expToSplice a = liftSplice $ pure a
 
 -- | A variant of 'examineCode' that takes a 'Splice' as an argument. Because
 -- this function takes a 'Splice' as an argyment, the type of this function

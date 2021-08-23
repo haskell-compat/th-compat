@@ -1,5 +1,6 @@
 ### next [????.??.??]
 * Implement `qGetDoc` and `qPutDoc` in the `Quasi` instance for `QuoteToQuasi`.
+* Add `expToSplice`.
 
 ### 0.1.2 [2021.03.12]
 * Add `bindSplice`, `bindSplice_`, `examineSplice`, `joinSplice`,

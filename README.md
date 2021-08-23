@@ -23,3 +23,61 @@ later), this module simply reexports `Quote` and `Code`
 from `Language.Haskell.TH.Syntax`. Refer to the Haddocks
 for `Language.Haskell.TH.Syntax.Compat` for examples of
 how to use this module.
+
+## Quick Start Guide
+
+Let's say you have a library that offers a `foo :: Q (TExp a)`
+and you want to make it compatible across this version.
+
+Use `SpliceQ` as a type alias for the return of your
+function instead. This is `Q (TExp a)` prior to GHC 9,
+and `Code Q a` after.  This allows your code to be spliced
+in regardless of GHC version.
+
+Use `liftSplice` to convert a `m (TExp a)` into a `Splice m a`.
+
+Use `examineSplice` before typed quoters. This will allow
+a typed quasiquotation to work regardless of GHC version.
+
+When splicing in a `TExp a` value into a typed quoter, use `expToSplice`.
+
+For a real life example, consider [this conversion, from this PR](https://github.com/parsonsmatt/discover-instances/pull/2):
+
+```haskell
+discoverInstances
+    :: forall (c :: _ -> Constraint) . (Typeable c)
+    => Q (TExp [SomeDict c])
+discoverInstances = do
+    let className = show (typeRep (Proxy @c))
+    instanceDecs <- reifyInstances (mkName className) [VarT (mkName "a")]
+
+    dicts <- fmap listTE $ traverse decToDict instanceDecs
+
+    [|| concat $$(pure dicts) ||]
+```
+
+With GHC 9, this will have the following problems:
+
+1. `reifyInstances` operates in `Q`, not `Code`, so it will not type check with the `[|| concat $$(pure dicts) ||]` line.
+2. We cannot call `pure` in `Code`, since `Code` is not an applicative.
+3. Typed quasiquotes return a `Quote m => Code m a`, not `Q (TExp a)`.
+
+To fix these problems, we make the following diff:
+
+```diff
+ discoverInstances
+     :: forall (c :: _ -> Constraint) . (Typeable c)
+-    => Q (TExp [SomeDict c])
++    => SpliceQ [SomeDic c]
+- discoverInstances = do
++ discoverInstances = liftSplice $ do
+     let className = show (typeRep (Proxy @c))
+     instanceDecs <- reifyInstances (mkName className) [VarT (mkName "a")]
+
+     dicts <- fmap listTE $ traverse decToDict instanceDecs
+
+-     [|| concat $$(pure dicts) ||]
++     liftSplice [|| concat $$(expToSplice dicts) ||]
+```
+
+The above pattern should work to ensure that code is compatible across a wide range of GHC versions.
