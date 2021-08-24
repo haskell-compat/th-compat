@@ -773,7 +773,7 @@ bindSplice_ q c = liftSplice ( q >> examineSplice c)
 -- in the result of a computation into a typed QuasiQuoter.
 --
 -- @
--- foo :: 'SpliceQ' a
+-- foo :: 'SpliceQ' Int
 -- foo = 'liftSplice' $ do
 --      ints <- [|| [1,2,3] ||] :: SpliceQ [Int]
 --      'examineSplice' [|| sum $$(expToSplice ints) ||]
