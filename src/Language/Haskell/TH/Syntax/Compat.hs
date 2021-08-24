@@ -690,6 +690,42 @@ joinCode ::
 joinCode = flip bindCode id
 # endif
 
+-- $splice
+--
+-- This section of code is useful for library authors looking to provide
+-- a typed @TemplateHaskell@ interface that is backwards- and
+-- forward-compatible. This section may be useful for you if you
+-- specifically intend for the splice to be done directly.
+--
+-- Prior to GHC 9, you'd offer a value with type @'Q' ('Syntax.TExp' a)@.
+-- After GHC 9, these values are no longer acceptable in a typed splice:
+-- typed splices must operate in @Code m a@ instead.
+--
+-- The @'Splice' m a@ type is used to work with both versions - it is a type
+-- alias, and depending on the version of @template-haskell@ that was
+-- compiled, it will either be @'Code' m a@ or @m ('Syntax.TExp' a)@.
+--
+-- The function 'liftSplice' can be used to convert a @'Q' ('Syntax.TExp' a)@
+-- expression into a @'Code' 'Q' a@ expression in a compatible manner - by
+-- lifting to 'SpliceQ', you get the right behavior depending on your
+-- @template-haskell@ version.
+--
+-- The function 'examineSplice' can be used on typed QuasiQuoters, and the
+-- result will be converted into an appropriate @m ('Syntax.TExp' a)@. This
+-- allows you to use typed quasiquoters in a @do@ block, much like
+-- 'examineCode' does with 'Code'.
+--
+-- With 'expToSplice', you can substitute uses of 'pure' when given the
+-- specific type:
+--
+-- @
+-- pureTExp :: 'Syntax.TExp' a -> 'Q' ('Syntax.TExp' a)
+-- pureTExp = pure
+-- @
+--
+-- This allows you to splice @'Syntax.TExp' a@ values directly into a typed
+-- quasiquoter.
+
 -- | @'Splice' m a@ is a type alias for:
 --
 -- * @'Code' m a@, if using @template-haskell-2.17.0.0@ or later, or
@@ -770,42 +806,6 @@ bindSplice_ = bindCode_
 bindSplice_ q c = liftSplice ( q >> examineSplice c)
 # endif
 
--- $splice
---
--- This section of code is useful for library authors looking to provide
--- a typed @TemplateHaskell@ interface that is backwards- and
--- forward-compatible. This section may be useful for you if you
--- specifically intend for the splice to be done directly.
---
--- Prior to GHC 9, you'd offer a value with type @'Q' ('Syntax.TExp' a)@.
--- After GHC 9, these values are no longer acceptable in a typed splice:
--- typed splices must operate in @Code m a@ instead.
---
--- The @'Splice' m a@ type is used to work with both versions - it is a type
--- alias, and depending on the version of @template-haskell@ that was
--- compiled, it will either be @'Code' m a@ or @m ('Syntax.TExp' a)@.
---
--- The function 'liftSplice' can be used to convert a @'Q' ('Syntax.TExp' a)@
--- expression into a @'Code' 'Q' a@ expression in a compatible manner - by
--- lifting to 'SpliceQ', you get the right behavior depending on your
--- @template-haskell@ version.
---
--- The function 'examineSplice' can be used on typed QuasiQuoters, and the
--- result will be converted into an appropriate @m ('Syntax.TExp' a)@. This
--- allows you to use typed quasiquoters in a @do@ block, much like
--- 'examineCode' does with 'Code'.
---
--- With 'expToSplice', you can substitute uses of 'pure' when given the
--- specific type:
---
--- @
--- pureTExp :: 'Syntax.TExp' a -> 'Q' ('Syntax.TExp' a)
--- pureTExp = pure
--- @
---
--- This allows you to splice @'Syntax.TExp' a@ values directly into a typed
--- quasiquoter.
-
 -- | Lift a @'Syntax.TExp' a@ into a 'Splice'. This is useful when splicing
 -- in the result of a computation into a typed QuasiQuoter.
 --
@@ -852,10 +852,16 @@ bindSplice_ q c = liftSplice ( q >> examineSplice c)
 -- A fully backwards- and forwards-compatible example looks like this:
 --
 -- @
+-- mkInt :: 'String' -> 'Q' 'Int'
+-- mkInt str = 'examineSplice' [|| length $$str ||]
+--
+-- mkInts :: ['String'] -> 'Q' ['Syntax.TExp' 'Int']
+-- mkInts = traverse mkInt
+--
 -- foo :: 'SpliceQ' 'Int'
 -- foo = 'liftSplice' $ do
 --      ints <- mkInts ["hello", "world", "goodybe", "bob"]
---      [|| sum $$(expToSplice (listTE ints)) ||]
+--      'examineSplice' [|| sum $$(expToSplice (listTE ints)) ||]
 -- @
 --
 -- @since ????.??.??
