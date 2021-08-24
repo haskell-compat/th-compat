@@ -788,7 +788,7 @@ bindSplice_ q c = liftSplice ( q >> examineSplice c)
 --
 -- @
 -- listTE :: ['Syntax.TExp' a] -> 'Syntax.TExp' [a]
--- listTE = 'Syntax.TExp' . 'ListE' . 'map' 'Syntax.unType'
+-- listTE = 'Syntax.TExp' . 'Syntax.ListE' . 'map' 'Syntax.unType'
 -- @
 --
 -- In a @do@ block using 'liftSplice', we can bind the resulting
