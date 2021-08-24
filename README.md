@@ -26,13 +26,14 @@ how to use this module.
 
 ## Quick Start Guide
 
-Let's say you have a library that offers a `foo :: Q (TExp a)`
-and you want to make it compatible across this version.
+Let's say you have a library that offers a `foo :: Q (TExp a)`,
+you want to make it compatible with the new `Code` type,
+and you intend that `foo` is spliced directly in to user code.
 
 Use `SpliceQ` as a type alias for the return of your
-function instead. This is `Q (TExp a)` prior to GHC 9,
-and `Code Q a` after.  This allows your code to be spliced
-in regardless of GHC version.
+function. This is `Q (TExp a)` prior to GHC 9, and `Code Q a`
+after.  This allows your code to be spliced in regardless of
+GHC version.
 
 Use `liftSplice` to convert a `m (TExp a)` into a `Splice m a`.
 
@@ -45,7 +46,7 @@ For a real life example, consider [this conversion, from this PR](https://github
 
 ```haskell
 discoverInstances
-    :: forall (c :: _ -> Constraint) . (Typeable c)
+    :: forall c. (Typeable c)
     => Q (TExp [SomeDict c])
 discoverInstances = do
     let className = show (typeRep (Proxy @c))
@@ -54,6 +55,11 @@ discoverInstances = do
     dicts <- fmap listTE $ traverse decToDict instanceDecs
 
     [|| concat $$(pure dicts) ||]
+
+listTE :: [TExp a] -> TExp [a]
+listTE = TExp . ListE . map unType
+
+decToDict :: InstanceDec -> Q (TExp [SomeDict c])
 ```
 
 With GHC 9, this will have the following problems:
@@ -68,7 +74,7 @@ To fix these problems, we make the following diff:
  discoverInstances
      :: forall (c :: _ -> Constraint) . (Typeable c)
 -    => Q (TExp [SomeDict c])
-+    => SpliceQ [SomeDic c]
++    => SpliceQ [SomeDict c]
 - discoverInstances = do
 + discoverInstances = liftSplice $ do
      let className = show (typeRep (Proxy @c))
