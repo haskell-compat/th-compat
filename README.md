@@ -72,7 +72,7 @@ To fix these problems, we make the following diff:
 
 ```diff
  discoverInstances
-     :: forall (c :: _ -> Constraint) . (Typeable c)
+     :: forall c. (Typeable c)
 -    => Q (TExp [SomeDict c])
 +    => SpliceQ [SomeDict c]
 - discoverInstances = do
@@ -83,7 +83,7 @@ To fix these problems, we make the following diff:
      dicts <- fmap listTE $ traverse decToDict instanceDecs
 
 -     [|| concat $$(pure dicts) ||]
-+     liftSplice [|| concat $$(expToSplice dicts) ||]
++     examineSplice [|| concat $$(expToSplice dicts) ||]
 ```
 
 The above pattern should work to ensure that code is compatible across a wide range of GHC versions.
