@@ -67,7 +67,7 @@ module Language.Haskell.TH.Syntax.Compat (
   , bindCode_
   , joinCode
 
-  -- * Compatibity with @Splice@s
+  -- * Compatibility with @Splice@s
   -- $splice
   , Splice
   , SpliceQ
