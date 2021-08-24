@@ -772,11 +772,53 @@ bindSplice_ q c = liftSplice ( q >> examineSplice c)
 -- | Lift a @'Syntax.TExp' a@ into a 'Splice'. This is useful when splicing
 -- in the result of a computation into a typed QuasiQuoter.
 --
+-- One example is 'traverse'ing over a list of elements and returning an
+-- expression from each element.
+--
 -- @
--- foo :: 'SpliceQ' Int
+-- mkInt :: 'String' -> 'Q' ('Syntax.TExp' 'Int')
+-- mkInt str = [|| length $$str ||]
+--
+-- mkInts :: ['String'] -> 'Q' ['Syntax.TExp' 'Int']
+-- mkInts = traverse mkInt
+-- @
+--
+-- This gives us a list of 'Syntax.TExp', not a 'Syntax.TExp' of a list. We
+-- can push the list inside the type with this function:
+--
+-- @
+-- listTE :: ['Syntax.TExp' a] -> 'Syntax.TExp' [a]
+-- listTE = 'Syntax.TExp' . 'ListE' . 'map' 'Syntax.unType'
+-- @
+--
+-- In a @do@ block using 'liftSplice', we can bind the resulting
+--
+-- @'Syntax.TExp' ['Int']@ out of the expression.
+--
+-- @
+-- foo :: 'Q' ('Syntax.TExp' Int)
+-- foo = do
+--      ints <- mkInts ["hello", "world", "goodybe", "bob"]
+--      [|| sum $$(pure (listTE ints)) ||]
+-- @
+--
+-- Prior to GHC 9, with the 'Q' type, we can write @'pure' :: 'Syntax.TExp' a -> 'Q' ('Syntax.TExp' a)@,
+-- which is a valid thing to use in a typed quasiquoter.
+-- However, after GHC 9, this code will fail to type check. There is no
+-- 'Applicative' instance for @'Code' m a@, so we need another way to
+-- splice it in.
+--
+-- A GHC 9 only solution can use @'Code' :: m ('Syntax.TExp' a) -> Code
+-- m a@ and 'pure' together, like: @'Code' . 'pure'@.
+--
+-- With 'expToSplice', we can splice it in a backwards compatible way.
+-- A fully backwards- and forwards-compatible example looks like this:
+--
+-- @
+-- foo :: 'SpliceQ' 'Int'
 -- foo = 'liftSplice' $ do
---      ints <- [|| [1,2,3] ||] :: SpliceQ [Int]
---      'examineSplice' [|| sum $$(expToSplice ints) ||]
+--      ints <- mkInts ["hello", "world", "goodybe", "bob"]
+--      [|| sum $$(expToSplice (listTE ints)) ||]
 -- @
 --
 -- @since ????.??.??
