@@ -30,8 +30,9 @@ tested-with:         GHC == 7.0.4
                    , GHC == 8.4.4
                    , GHC == 8.6.5
                    , GHC == 8.8.4
-                   , GHC == 8.10.4
+                   , GHC == 8.10.7
                    , GHC == 9.0.1
+                   , GHC == 9.2.*
 extra-source-files:  CHANGELOG.md, README.md
 
 source-repository head
@@ -41,7 +42,7 @@ source-repository head
 library
   exposed-modules:     Language.Haskell.TH.Syntax.Compat
   build-depends:       base             >= 4.3 && < 5
-                     , template-haskell >= 2.5 && < 2.18
+                     , template-haskell >= 2.5 && < 2.19
   if !impl(ghc >= 8.0)
     build-depends:     fail             == 4.9.*
                      , transformers     >= 0.2 && < 0.6
@@ -57,10 +58,10 @@ test-suite spec
   other-modules:       Language.Haskell.TH.Syntax.CompatSpec
                        Types
   build-depends:       base             >= 4.3 && < 5
-                     , base-compat      >= 0.6 && < 0.12
+                     , base-compat      >= 0.6 && < 0.13
                      , hspec            >= 2   && < 3
                      , mtl              >= 2.1 && < 2.3
-                     , template-haskell >= 2.5 && < 2.18
+                     , template-haskell >= 2.5 && < 2.19
                      , th-compat
   build-tool-depends:  hspec-discover:hspec-discover >= 2
   hs-source-dirs:      tests
