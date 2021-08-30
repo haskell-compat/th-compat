@@ -864,7 +864,7 @@ bindSplice_ q c = liftSplice ( q >> examineSplice c)
 --      'examineSplice' [|| sum $$(expToSplice (listTE ints)) ||]
 -- @
 --
--- @since ????.??.??
+-- @since 0.1.3
 expToSplice :: Applicative m => Syntax.TExp a -> Splice m a
 expToSplice a = liftSplice $ pure a
 
