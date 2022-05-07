@@ -447,6 +447,9 @@ instance Quote m => Quasi (QuoteToQuasi m) where
   qGetDoc             = qtqError "qGetDoc"
   qPutDoc             = qtqError "qPutDoc"
 #endif
+#if MIN_VERSION_template_haskell(2,19,0)
+  qGetPackageRoot     = qtqError "qGetPackageRoot"
+#endif
 
 -------------------------------------------------------------------------------
 -- Code

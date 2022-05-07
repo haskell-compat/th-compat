@@ -1,3 +1,7 @@
+### next [????.??.??]
+* Implement `qGetPackageRoot` in the `Quasi` instance for `QuoteToQuasi` when
+  building with `template-haskell-2.19.0.0` (GHC 9.4) or later.
+
 ### 0.1.3 [2021.08.29]
 * Implement `qGetDoc` and `qPutDoc` in the `Quasi` instance for `QuoteToQuasi`.
 * Add `expToSplice`.
