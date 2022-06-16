@@ -30,6 +30,8 @@
 --
 -- * The 'Code' type
 --
+-- * The 'getPackageRoot' and 'makeRelativeToProject' utility functions
+--
 -- Refer to the Haddocks below for examples of how to use each of these in a
 -- backwards-compatible way.
 module Language.Haskell.TH.Syntax.Compat (
@@ -83,6 +85,10 @@ module Language.Haskell.TH.Syntax.Compat (
   , unTypeSplice
   , expToSplice
 #endif
+
+  -- * Package root functions
+  , getPackageRoot
+  , makeRelativeToProject
   ) where
 
 import qualified Control.Monad.Fail as Fail
@@ -108,6 +114,13 @@ import Language.Haskell.TH.Syntax
   , unsafeTExpCoerce, unTypeQ )
 #else
 import Language.Haskell.TH (Name)
+#endif
+
+#if MIN_VERSION_template_haskell(2,19,0)
+import Language.Haskell.TH.Syntax (getPackageRoot, makeRelativeToProject)
+#else
+import System.FilePath (isRelative, takeExtension, takeDirectory, (</>))
+import System.Directory (getDirectoryContents, canonicalizePath)
 #endif
 
 -------------------------------------------------------------------------------
@@ -1058,4 +1071,62 @@ unTypeSplice = unTypeCode
 # else
 unTypeSplice = unTypeQQuote
 # endif
+#endif
+
+-------------------------------------------------------------------------------
+-- Package root
+-------------------------------------------------------------------------------
+
+#if !MIN_VERSION_template_haskell(2,19,0)
+
+-- | Get the package root for the current package which is being compiled.
+-- This can be set explicitly with the -package-root flag but is normally
+-- just the current working directory.
+--
+-- The motivation for this flag is to provide a principled means to remove the
+-- assumption from splices that they will be executed in the directory where the
+-- cabal file resides. Projects such as haskell-language-server can't and don't
+-- change directory when compiling files but instead set the -package-root flag
+-- appropiately.
+--
+-- This is best-effort compatibility implementation.
+-- This function looks at the source location of the Haskell file calling it,
+-- finds the first parent directory with a @.cabal@ file, and uses that as the
+-- root directory for fixing the relative path.
+--
+getPackageRoot :: Q FilePath
+getPackageRoot = getPackageRootPredicate $ (==) ".cabal" . takeExtension
+
+-- The implementation is modified from the makeRelativeToLocationPredicate
+-- function in the file-embed package
+-- Copyright 2008, Michael Snoyman. All rights reserved.
+-- under BSD-2-Clause license.
+getPackageRootPredicate :: (FilePath -> Bool) -> Q FilePath
+getPackageRootPredicate isTargetFile = do
+    loc <- qLocation
+    (srcFP, mdir) <- Syntax.runIO $ do
+        srcFP <- canonicalizePath $ Syntax.loc_filename loc
+        mdir <- findProjectDir srcFP
+        return (srcFP, mdir)
+    case mdir of
+        Nothing  -> fail $ "Could not find .cabal file for path: " ++ srcFP
+        Just dir -> return dir
+  where
+    findProjectDir x = do
+        let dir = takeDirectory x
+        if dir == x
+        then return Nothing
+        else do
+            contents <- getDirectoryContents dir
+            if any isTargetFile contents
+            then return (Just dir)
+            else findProjectDir dir
+
+-- | The input is a filepath, which if relative is offset by the package root.
+makeRelativeToProject :: FilePath -> Q FilePath
+makeRelativeToProject fp | isRelative fp = do
+  root <- getPackageRoot
+  return (root </> fp)
+makeRelativeToProject fp = return fp
+
 #endif
