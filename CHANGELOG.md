@@ -1,4 +1,4 @@
-### next [????.??.??]
+### 0.1.4 [2022.07.23]
 * Backport the `getPackageRoot` and `makeRelativeToProject` functions
   introduced in `template-haskell-2.19.0.0` (GHC 9.4).
 * Implement `qGetPackageRoot` in the `Quasi` instance for `QuoteToQuasi` when
