@@ -64,7 +64,7 @@ test-suite spec
   other-modules:       Language.Haskell.TH.Syntax.CompatSpec
                        Types
   build-depends:       base             >= 4.3 && < 5
-                     , base-compat      >= 0.6 && < 0.13
+                     , base-compat      >= 0.6 && < 0.14
                      , hspec            >= 2   && < 3
                      , mtl              >= 2.1 && < 2.4
                      , template-haskell >= 2.5 && < 2.21
