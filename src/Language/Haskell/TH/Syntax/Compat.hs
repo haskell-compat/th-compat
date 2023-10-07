@@ -756,7 +756,9 @@ joinCode = flip bindCode id
 -- differ between @template-haskell@ versions as well.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
-# if MIN_VERSION_template_haskell(2,17,0)
+# if MIN_VERSION_template_haskell(2,21,0)
+type Splice  = Code :: ((* -> *) -> forall r. TYPE r -> *)
+# elif MIN_VERSION_template_haskell(2,17,0)
 type Splice  = Code :: (forall r. (* -> *) -> TYPE r -> *)
 # elif MIN_VERSION_template_haskell(2,16,0)
 type Splice m (a :: TYPE r) = m (Syntax.TExp a)
