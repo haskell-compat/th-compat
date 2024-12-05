@@ -1,6 +1,6 @@
 cabal-version:       >=1.10
 name:                th-compat
-version:             0.1.5
+version:             0.1.6
 synopsis:            Backward- (and forward-)compatible Quote and Code types
 description:         This package defines a "Language.Haskell.TH.Syntax.Compat"
                      module, which backports the @Quote@ and @Code@ types to

@@ -1,4 +1,4 @@
-### next [????.??.??]
+### 0.1.6 [2024.12.05]
 * Drop support for pre-8.0 versions of GHC.
 
 ### 0.1.5 [2024.03.19]
