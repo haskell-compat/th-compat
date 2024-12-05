@@ -1,4 +1,4 @@
-distribution:           bionic
+distribution:           focal
 no-tests-no-benchmarks: False
 unconstrained:          False
 local-ghc-options:      -Werror
