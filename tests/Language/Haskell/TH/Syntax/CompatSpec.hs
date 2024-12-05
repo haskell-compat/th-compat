@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -11,14 +10,9 @@ import Control.Monad.State
 import Language.Haskell.TH.Syntax hiding (newName)
 import Language.Haskell.TH.Syntax.Compat
 
-import Prelude ()
-import Prelude.Compat
-
 import Test.Hspec
 
-#if MIN_VERSION_template_haskell(2,9,0)
 import Types
-#endif
 
 main :: IO ()
 main = hspec spec
@@ -38,7 +32,6 @@ spec = parallel $ do
       evaluate (runPureQ (unsafeQToQuote (qReport True "Explosion in 3... 2... 1...")))
         `shouldThrow` errorCall "`unsafeQToQuote` does not support code that uses qReport"
 
-#if MIN_VERSION_template_haskell(2,9,0)
   describe "IsCode" $
     it "manipulates typed TH expressions in a backwards-compatible way" $
       $$(fromCode (toCode [|| "abc" ||])) `shouldBe` "abc"
@@ -59,7 +52,6 @@ spec = parallel $ do
     it "allows unwrapping Code in a convenient, backwards-compatible way" $
       $$(unsafeSpliceCoerce (return . ListE =<< traverse unTypeSplice [ [|| "abc" ||] ]) :: SpliceQ [String])
         `shouldBe` ["abc"]
-#endif
 
 newtype PureQ a = MkPureQ (State Uniq a)
   deriving (Functor, Applicative, Monad, MonadState Uniq)

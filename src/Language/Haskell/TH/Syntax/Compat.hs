@@ -5,21 +5,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE RoleAnnotations #-}
-#endif
 
 -- | This module exists to make it possible to define code that works across
 -- a wide range of @template-haskell@ versions with as little CPP as possible.
@@ -42,17 +33,12 @@ module Language.Haskell.TH.Syntax.Compat (
     -- ** The @unsafeQToQuote@ function
   , unsafeQToQuote
     -- ** Functions from @Language.Haskell.TH.Syntax@
-#if MIN_VERSION_template_haskell(2,9,0)
   , unTypeQQuote
   , unsafeTExpCoerceQuote
-#endif
   , liftQuote
-#if MIN_VERSION_template_haskell(2,9,0)
   , liftTypedQuote
-#endif
   , liftStringQuote
 
-#if MIN_VERSION_template_haskell(2,9,0)
     -- * The @Code@ and @CodeQ@ types
     -- $code
   , Code(..), CodeQ
@@ -84,7 +70,6 @@ module Language.Haskell.TH.Syntax.Compat (
   , unsafeSpliceCoerce
   , unTypeSplice
   , expToSplice
-#endif
 
   -- * Package root functions
   , getPackageRoot
@@ -97,10 +82,6 @@ import Language.Haskell.TH (Exp)
 import qualified Language.Haskell.TH.Lib as Lib ()
 import Language.Haskell.TH.Syntax (Q, runQ, Quasi(..))
 import qualified Language.Haskell.TH.Syntax as Syntax
-
-#if !(MIN_VERSION_base(4,8,0))
-import Control.Applicative
-#endif
 
 #if MIN_VERSION_template_haskell(2,16,0)
 import GHC.Exts (RuntimeRep, TYPE)
@@ -192,13 +173,7 @@ import System.Directory (getDirectoryContents, canonicalizePath)
 -- For many years the type of a quotation was fixed to be `Q Exp` but by
 -- more precisely specifying the minimal interface it enables the `Exp` to
 -- be extracted purely from the quotation without interacting with `Q`.
-class ( Monad m
-# if   !(MIN_VERSION_template_haskell(2,7,0))
-      , Functor m
-# elif !(MIN_VERSION_template_haskell(2,10,0))
-      , Applicative m
-# endif
-      ) => Quote m where
+class Monad m => Quote m where
   {- |
   Generate a fresh name, which cannot be captured.
 
@@ -239,7 +214,6 @@ instance Quote Q where
   newName = qNewName
 #endif
 
-#if MIN_VERSION_template_haskell(2,9,0)
 -- | Discard the type annotation and produce a plain Template Haskell
 -- expression
 --
@@ -251,18 +225,18 @@ instance Quote Q where
 -- As this function interacts with typed Template Haskell, this function is
 -- only defined on @template-haskell-2.9.0.0@ (GHC 7.8) or later.
 unTypeQQuote ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-# else
+#else
   forall a m .
-# endif
+#endif
   Quote m => m (Syntax.TExp a) -> m Exp
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 unTypeQQuote = unTypeQ
-# else
+#else
 unTypeQQuote m = do { Syntax.TExp e <- m
                     ; return e }
-# endif
+#endif
 
 -- | Annotate the Template Haskell expression with a type
 --
@@ -278,18 +252,17 @@ unTypeQQuote m = do { Syntax.TExp e <- m
 -- As this function interacts with typed Template Haskell, this function is
 -- only defined on @template-haskell-2.9.0.0@ (GHC 7.8) or later.
 unsafeTExpCoerceQuote ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-# else
+#else
   forall a m .
-# endif
+#endif
   Quote m => m Exp -> m (Syntax.TExp a)
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 unsafeTExpCoerceQuote = unsafeTExpCoerce
-# else
+#else
 unsafeTExpCoerceQuote m = do { e <- m
                              ; return (Syntax.TExp e) }
-# endif
 #endif
 
 -- | Turn a value into a Template Haskell expression, suitable for use in
@@ -313,7 +286,6 @@ liftQuote = Syntax.lift
 liftQuote = unsafeQToQuote . Syntax.lift
 #endif
 
-#if MIN_VERSION_template_haskell(2,9,0)
 -- | Turn a value into a Template Haskell typed expression, suitable for use
 -- in a typed splice.
 --
@@ -333,19 +305,18 @@ liftQuote = unsafeQToQuote . Syntax.lift
 --
 -- Levity-polymorphic since /template-haskell-2.17.0.0/.
 liftTypedQuote ::
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
   forall (r :: RuntimeRep) (t :: TYPE r) m .
-# else
+#else
   forall t m .
-# endif
+#endif
   (Syntax.Lift t, Quote m) => t -> Code m t
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 liftTypedQuote = Syntax.liftTyped
-# elif MIN_VERSION_template_haskell(2,16,0)
+#elif MIN_VERSION_template_haskell(2,16,0)
 liftTypedQuote = liftCode . unsafeQToQuote . Syntax.liftTyped
-# else
+#else
 liftTypedQuote = unsafeCodeCoerce . liftQuote
-# endif
 #endif
 
 -- | This is a variant of the 'Syntax.liftString' function that is always
@@ -422,11 +393,9 @@ instance Quote m => Quasi (QuoteToQuasi m) where
   qReify              = qtqError "qReify"
   qLocation           = qtqError "qLocation"
   qRunIO              = qtqError "qRunIO"
-#if MIN_VERSION_template_haskell(2,7,0)
   qReifyInstances     = qtqError "qReifyInstances"
   qLookupName         = qtqError "qLookupName"
   qAddDependentFile   = qtqError "qAddDependentFile"
-# if MIN_VERSION_template_haskell(2,9,0)
   qReifyRoles         = qtqError "qReifyRoles"
   qReifyAnnotations   = qtqError "qReifyAnnotations"
   qReifyModule        = qtqError "qReifyModule"
@@ -434,16 +403,10 @@ instance Quote m => Quasi (QuoteToQuasi m) where
   qAddModFinalizer    = qtqError "qAddModFinalizer"
   qGetQ               = qtqError "qGetQ"
   qPutQ               = qtqError "qPutQ"
-# endif
-# if MIN_VERSION_template_haskell(2,11,0)
   qReifyFixity        = qtqError "qReifyFixity"
   qReifyConStrictness = qtqError "qReifyConStrictness"
   qIsExtEnabled       = qtqError "qIsExtEnabled"
   qExtsEnabled        = qtqError "qExtsEnabled"
-# endif
-#elif MIN_VERSION_template_haskell(2,5,0)
-  qClassInstances     = qtqError "qClassInstances"
-#endif
 #if MIN_VERSION_template_haskell(2,13,0)
   qAddCorePlugin      = qtqError "qAddCorePlugin"
 #endif
@@ -499,7 +462,6 @@ instance Quote m => Quasi (QuoteToQuasi m) where
 -- any function that mentions 'Code' in its type are only defined on
 -- @template-haskell-2.9.0.0@ (GHC 7.8) or later.
 
-#if MIN_VERSION_template_haskell(2,9,0)
 -- | A class that allows one to smooth over the differences between
 -- @'Code' 'm' a@ (the type of typed Template Haskell quotations on
 -- @template-haskell-2.17.0.0@ or later) and @'m' ('TExp' a)@ (the type of
@@ -526,11 +488,11 @@ instance Quote m => Quasi (QuoteToQuasi m) where
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 class IsCode q
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
              (a :: TYPE r)
-# else
+#else
              a
-# endif
+#endif
              c | c -> a q where
   -- | Convert something to a 'Code'.
   toCode   :: c -> Code q a
@@ -539,22 +501,22 @@ class IsCode q
 
 -- | Levity-polymorphic since /template-haskell-2.16.0.0/.
 instance Quote q => IsCode q
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
                            (a :: TYPE r)
-# else
+#else
                            a
-# endif
+#endif
                            (Code q a) where
   toCode   = id
   fromCode = id
 
 -- | Levity-polymorphic since /template-haskell-2.16.0.0/.
 instance texp ~ Syntax.TExp a => IsCode Q
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
                                         (a :: TYPE r)
-# else
+#else
                                         a
-# endif
+#endif
                                         (Q texp) where
   toCode   = liftCode
   fromCode = examineCode
@@ -588,33 +550,33 @@ instance texp ~ Syntax.TExp a => IsCode Q
 -- problem.
 
 -- | Levity-polymorphic since /template-haskell-2.16.0.0/.
-# if !(MIN_VERSION_template_haskell(2,17,0))
+#if !(MIN_VERSION_template_haskell(2,17,0))
 type role Code representational nominal
 newtype Code m
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
              (a :: TYPE (r :: RuntimeRep))
-#  else
+# else
              a
-#  endif
+# endif
   = Code
   { examineCode :: m (Syntax.TExp a) -- ^ Underlying monadic value
   }
 
 type CodeQ = Code Q
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
                     :: (TYPE r -> *)
-# endif
+#endif
 
 -- | Unsafely convert an untyped code representation into a typed code
 -- representation.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 unsafeCodeCoerce ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-#  else
+# else
   forall a m .
-#  endif
+# endif
   Quote m => m Exp -> Code m a
 unsafeCodeCoerce m = Code (unsafeTExpCoerceQuote m)
 
@@ -623,11 +585,11 @@ unsafeCodeCoerce m = Code (unsafeTExpCoerceQuote m)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 liftCode ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-#  else
+# else
   forall a m .
-#  endif
+# endif
   m (Syntax.TExp a) -> Code m a
 liftCode = Code
 
@@ -635,11 +597,11 @@ liftCode = Code
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 unTypeCode ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-#  else
+# else
   forall a m .
-#  endif
+# endif
   Quote m => Code m a -> m Exp
 unTypeCode = unTypeQQuote . examineCode
 
@@ -653,11 +615,11 @@ unTypeCode = unTypeQQuote . examineCode
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 hoistCode ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m n (r :: RuntimeRep) (a :: TYPE r) .
-#  else
+# else
   forall m n a .
-#  endif
+# endif
   Monad m => (forall x . m x -> n x) -> Code m a -> Code n a
 hoistCode f (Code a) = Code (f a)
 
@@ -667,11 +629,11 @@ hoistCode f (Code a) = Code (f a)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 bindCode ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m a (r :: RuntimeRep) (b :: TYPE r) .
-#  else
+# else
   forall m a b .
-#  endif
+# endif
   Monad m => m a -> (a -> Code m b) -> Code m b
 bindCode q k = liftCode (q >>= examineCode . k)
 
@@ -680,11 +642,11 @@ bindCode q k = liftCode (q >>= examineCode . k)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 bindCode_ ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m a (r :: RuntimeRep) (b :: TYPE r) .
-#  else
+# else
   forall m a b .
-#  endif
+# endif
   Monad m => m a -> Code m b -> Code m b
 bindCode_ q c = liftCode ( q >> examineCode c)
 
@@ -698,14 +660,14 @@ bindCode_ q c = liftCode ( q >> examineCode c)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 joinCode ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m (r :: RuntimeRep) (a :: TYPE r) .
-#  else
+# else
   forall m a .
-#  endif
+# endif
   Monad m => m (Code m a) -> Code m a
 joinCode = flip bindCode id
-# endif
+#endif
 
 -- $splice
 --
@@ -756,15 +718,15 @@ joinCode = flip bindCode id
 -- differ between @template-haskell@ versions as well.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
-# if MIN_VERSION_template_haskell(2,22,0)
+#if MIN_VERSION_template_haskell(2,22,0)
 type Splice  = Code :: ((* -> *) -> forall r. TYPE r -> *)
-# elif MIN_VERSION_template_haskell(2,17,0)
+#elif MIN_VERSION_template_haskell(2,17,0)
 type Splice  = Code :: (forall r. (* -> *) -> TYPE r -> *)
-# elif MIN_VERSION_template_haskell(2,16,0)
+#elif MIN_VERSION_template_haskell(2,16,0)
 type Splice m (a :: TYPE r) = m (Syntax.TExp a)
-# else
+#else
 type Splice m a = m (Syntax.TExp a)
-# endif
+#endif
 
 -- | @'SpliceQ' a@ is a type alias for:
 --
@@ -779,13 +741,13 @@ type Splice m a = m (Syntax.TExp a)
 -- differ between @template-haskell@ versions as well.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 type SpliceQ = Splice Q :: (TYPE r -> *)
-# elif MIN_VERSION_template_haskell(2,16,0)
+#elif MIN_VERSION_template_haskell(2,16,0)
 type SpliceQ (a :: TYPE r) = Splice Q a
-# else
+#else
 type SpliceQ a = Splice Q a
-# endif
+#endif
 
 -- | A variant of 'bindCode' that works over 'Splice's. Because this function
 -- uses 'Splice', the type of this function will be different depending on
@@ -794,17 +756,17 @@ type SpliceQ a = Splice Q a
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 bindSplice ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m a (r :: RuntimeRep) (b :: TYPE r) .
-#  else
-  forall m a b .
-#  endif
-  Monad m => m a -> (a -> Splice m b) -> Splice m b
-# if MIN_VERSION_template_haskell(2,17,0)
-bindSplice = bindCode
 # else
-bindSplice q k = liftSplice (q >>= examineSplice . k)
+  forall m a b .
 # endif
+  Monad m => m a -> (a -> Splice m b) -> Splice m b
+#if MIN_VERSION_template_haskell(2,17,0)
+bindSplice = bindCode
+#else
+bindSplice q k = liftSplice (q >>= examineSplice . k)
+#endif
 
 -- | A variant of 'bindCode_' that works over 'Splice's. Because this function
 -- uses 'Splice', the type of this function will be different depending on
@@ -813,17 +775,17 @@ bindSplice q k = liftSplice (q >>= examineSplice . k)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 bindSplice_ ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m a (r :: RuntimeRep) (b :: TYPE r) .
-#  else
-  forall m a b .
-#  endif
-  Monad m => m a -> Splice m b -> Splice m b
-# if MIN_VERSION_template_haskell(2,17,0)
-bindSplice_ = bindCode_
 # else
-bindSplice_ q c = liftSplice ( q >> examineSplice c)
+  forall m a b .
 # endif
+  Monad m => m a -> Splice m b -> Splice m b
+#if MIN_VERSION_template_haskell(2,17,0)
+bindSplice_ = bindCode_
+#else
+bindSplice_ q c = liftSplice ( q >> examineSplice c)
+#endif
 
 -- | Lift a @'Syntax.TExp' a@ into a 'Splice'. This is useful when splicing
 -- in the result of a computation into a typed QuasiQuoter.
@@ -894,17 +856,17 @@ expToSplice a = liftSplice $ pure a
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 examineSplice ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) m (a :: TYPE r) .
-# else
+#else
   forall m a .
-# endif
+#endif
   Splice m a -> m (Syntax.TExp a)
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 examineSplice = examineCode
-# else
+#else
 examineSplice = id
-# endif
+#endif
 
 -- | A variant of 'hoistCode' that works over 'Splice's. Because this function
 -- uses 'Splice', the type of this function will be different depending on
@@ -913,17 +875,17 @@ examineSplice = id
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 hoistSplice ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m n (r :: RuntimeRep) (a :: TYPE r) .
-#  else
-  forall m n a .
-#  endif
-  Monad m => (forall x . m x -> n x) -> Splice m a -> Splice n a
-# if MIN_VERSION_template_haskell(2,17,0)
-hoistSplice = hoistCode
 # else
-hoistSplice f a = f a
+  forall m n a .
 # endif
+  Monad m => (forall x . m x -> n x) -> Splice m a -> Splice n a
+#if MIN_VERSION_template_haskell(2,17,0)
+hoistSplice = hoistCode
+#else
+hoistSplice f a = f a
+#endif
 
 -- | A variant of 'joinCode' that works over 'Splice's. Because this function
 -- uses 'Splice', the type of this function will be different depending on
@@ -932,17 +894,17 @@ hoistSplice f a = f a
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 joinSplice ::
-#  if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
   forall m (r :: RuntimeRep) (a :: TYPE r) .
-#  else
-  forall m a .
-#  endif
-  Monad m => m (Splice m a) -> Splice m a
-# if MIN_VERSION_template_haskell(2,17,0)
-joinSplice = joinCode
 # else
-joinSplice = flip bindSplice id
+  forall m a .
 # endif
+  Monad m => m (Splice m a) -> Splice m a
+#if MIN_VERSION_template_haskell(2,17,0)
+joinSplice = joinCode
+#else
+joinSplice = flip bindSplice id
+#endif
 
 -- | A variant of 'liftCode' that returns a 'Splice'. Because this function
 -- returns a 'Splice', the return type of this function will be different
@@ -952,17 +914,17 @@ joinSplice = flip bindSplice id
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 liftSplice ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-# else
+#else
   forall a m .
-# endif
+#endif
   m (Syntax.TExp a) -> Splice m a
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 liftSplice = liftCode
-# else
+#else
 liftSplice = id
-# endif
+#endif
 
 -- | A variant of 'liftTypedQuote' that is:
 --
@@ -1043,17 +1005,17 @@ liftTypedFromUntypedSplice = unsafeSpliceCoerce . liftQuote
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 unsafeSpliceCoerce ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-# else
+#else
   forall a m .
-# endif
+#endif
   Quote m => m Exp -> Splice m a
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 unsafeSpliceCoerce = unsafeCodeCoerce
-# else
+#else
 unsafeSpliceCoerce = unsafeTExpCoerceQuote
-# endif
+#endif
 
 -- | A variant of 'unTypeCode' that takes a 'Splice' as an argument. Because
 -- this function takes a 'Splice' as an argyment, the type of this function
@@ -1062,17 +1024,16 @@ unsafeSpliceCoerce = unsafeTExpCoerceQuote
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 unTypeSplice ::
-# if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,16,0)
   forall (r :: RuntimeRep) (a :: TYPE r) m .
-# else
+#else
   forall a m .
-# endif
+#endif
   Quote m => Splice m a -> m Exp
-# if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,17,0)
 unTypeSplice = unTypeCode
-# else
+#else
 unTypeSplice = unTypeQQuote
-# endif
 #endif
 
 -------------------------------------------------------------------------------
