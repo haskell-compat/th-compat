@@ -32,6 +32,7 @@ tested-with:         GHC == 8.0.2
                    , GHC == 9.6.6
                    , GHC == 9.8.4
                    , GHC == 9.10.1
+                   , GHC == 9.12.1
 extra-source-files:  CHANGELOG.md, README.md
 
 source-repository head
@@ -41,7 +42,7 @@ source-repository head
 library
   exposed-modules:     Language.Haskell.TH.Syntax.Compat
   build-depends:       base             >= 4.9  && < 5
-                     , template-haskell >= 2.11 && < 2.23
+                     , template-haskell >= 2.11 && < 2.24
   if !impl(ghc >= 9.4)
     build-depends:     filepath         >= 1.2.0.0 && < 1.6
                      , directory        >= 1.1.0.0 && < 1.4
@@ -59,7 +60,7 @@ test-suite spec
   build-depends:       base             >= 4.9 && < 5
                      , hspec            >= 2   && < 3
                      , mtl              >= 2.1 && < 2.4
-                     , template-haskell >= 2.5 && < 2.23
+                     , template-haskell >= 2.5 && < 2.24
                      , th-compat
   build-tool-depends:  hspec-discover:hspec-discover >= 2
   hs-source-dirs:      tests
