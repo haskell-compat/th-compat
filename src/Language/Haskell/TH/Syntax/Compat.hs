@@ -12,6 +12,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+#if __GLASGOW_HASKELL__ >= 810
+{-# LANGUAGE StandaloneKindSignatures #-}
+#endif
+
 -- | This module exists to make it possible to define code that works across
 -- a wide range of @template-haskell@ versions with as little CPP as possible.
 -- To that end, this module currently backports the following
@@ -552,6 +556,9 @@ instance texp ~ Syntax.TExp a => IsCode Q
 
 -- | Levity-polymorphic since /template-haskell-2.16.0.0/.
 #if !(MIN_VERSION_template_haskell(2,17,0))
+# if __GLASGOW_HASKELL__ >= 810
+type Code :: forall r. (Type -> Type) -> TYPE r -> Type
+# endif
 type role Code representational nominal
 newtype Code m
 # if MIN_VERSION_template_haskell(2,16,0)
@@ -563,6 +570,9 @@ newtype Code m
   { examineCode :: m (Syntax.TExp a) -- ^ Underlying monadic value
   }
 
+# if __GLASGOW_HASKELL__ >= 810
+type CodeQ :: TYPE r -> Type
+# endif
 type CodeQ = Code Q
 # if MIN_VERSION_template_haskell(2,16,0)
                     :: (TYPE r -> Type)
@@ -720,6 +730,11 @@ joinCode = flip bindCode id
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 #if MIN_VERSION_template_haskell(2,22,0)
+type Splice :: (Type -> Type) -> forall r. TYPE r -> Type
+#elif __GLASGOW_HASKELL__ >= 810
+type Splice :: forall r. (Type -> Type) -> TYPE r -> Type
+#endif
+#if MIN_VERSION_template_haskell(2,22,0)
 type Splice  = Code :: ((Type -> Type) -> forall r. TYPE r -> Type)
 #elif MIN_VERSION_template_haskell(2,17,0)
 type Splice  = Code :: (forall r. (Type -> Type) -> TYPE r -> Type)
@@ -742,8 +757,11 @@ type Splice m a = m (Syntax.TExp a)
 -- differ between @template-haskell@ versions as well.
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
+#if __GLASGOW_HASKELL__ >= 810
+type SpliceQ :: TYPE r -> Type
+#endif
 #if MIN_VERSION_template_haskell(2,17,0)
-type SpliceQ = Splice Q :: (TYPE r -> Type)
+type SpliceQ = Splice Q
 #elif MIN_VERSION_template_haskell(2,16,0)
 type SpliceQ (a :: TYPE r) = Splice Q a
 #else
