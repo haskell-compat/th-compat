@@ -564,9 +564,9 @@ newtype Code m
   }
 
 type CodeQ = Code Q
-#if MIN_VERSION_template_haskell(2,16,0)
+# if MIN_VERSION_template_haskell(2,16,0)
                     :: (TYPE r -> Type)
-#endif
+# endif
 
 -- | Unsafely convert an untyped code representation into a typed code
 -- representation.
