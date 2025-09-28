@@ -78,6 +78,7 @@ module Language.Haskell.TH.Syntax.Compat (
 
 import qualified Control.Monad.Fail as Fail
 import Control.Monad.IO.Class (MonadIO(..))
+import Data.Kind (Type)
 import Language.Haskell.TH (Exp)
 import qualified Language.Haskell.TH.Lib as Lib ()
 import Language.Haskell.TH.Syntax (Q, runQ, Quasi(..))
@@ -373,7 +374,7 @@ unsafeQToQuote = unQTQ . runQ
 -- other method of 'Quasi' to be an error, since they cannot be implemented
 -- using 'Quote' alone. Similarly, its 'MonadFail' and 'MonadIO' instances
 -- define 'fail' and 'liftIO', respectively, to be errors.
-newtype QuoteToQuasi (m :: * -> *) a = QTQ { unQTQ :: m a }
+newtype QuoteToQuasi (m :: Type -> Type) a = QTQ { unQTQ :: m a }
   deriving (Functor, Applicative, Monad)
 
 qtqError :: String -> a
@@ -564,7 +565,7 @@ newtype Code m
 
 type CodeQ = Code Q
 #if MIN_VERSION_template_haskell(2,16,0)
-                    :: (TYPE r -> *)
+                    :: (TYPE r -> Type)
 #endif
 
 -- | Unsafely convert an untyped code representation into a typed code
@@ -719,9 +720,9 @@ joinCode = flip bindCode id
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 #if MIN_VERSION_template_haskell(2,22,0)
-type Splice  = Code :: ((* -> *) -> forall r. TYPE r -> *)
+type Splice  = Code :: ((Type -> Type) -> forall r. TYPE r -> Type)
 #elif MIN_VERSION_template_haskell(2,17,0)
-type Splice  = Code :: (forall r. (* -> *) -> TYPE r -> *)
+type Splice  = Code :: (forall r. (Type -> Type) -> TYPE r -> Type)
 #elif MIN_VERSION_template_haskell(2,16,0)
 type Splice m (a :: TYPE r) = m (Syntax.TExp a)
 #else
@@ -742,7 +743,7 @@ type Splice m a = m (Syntax.TExp a)
 --
 -- Levity-polymorphic since /template-haskell-2.16.0.0/.
 #if MIN_VERSION_template_haskell(2,17,0)
-type SpliceQ = Splice Q :: (TYPE r -> *)
+type SpliceQ = Splice Q :: (TYPE r -> Type)
 #elif MIN_VERSION_template_haskell(2,16,0)
 type SpliceQ (a :: TYPE r) = Splice Q a
 #else
